@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+
+from gradelib import *
+from subprocess import Popen
+
+r = Runner(save("jos.out"),
+           stop_breakpoint("readline"))
+
+@test(0, "running JOS")
+def test_jos():
+    r.run_qemu()
+
+@test(1, "Physical page allocator", parent=test_jos)
+def test_check_page_alloc():
+    r.match(r"check_page_alloc\(\) succeeded!")
+
+@test(1, "Page management", parent=test_jos)
+def test_check_page():
+    r.match(r"check_page\(\) succeeded!")
+
+@test(1, "Kernel page directory", parent=test_jos)
+def test_check_kern_pgdir():
+    r.match(r"check_kern_pgdir\(\) succeeded!")
+
+@test(1, "Page management 2", parent=test_jos)
+def test_check_page_installed_pgdir():
+    r.match(r"check_page_installed_pgdir\(\) succeeded!")
+
+@test(1, "Large pages", parent=test_jos)
+def test_check_pse():
+    if Popen(["grep", "-qE", "^[ \t]*#[ \t]*ifn?def[ \t]+TP1_PSE", "kern/pmap.c"]).wait():
+        raise NotImplementedError
+    r.run_qemu(make_args=["LABDEFS=-DTP1_PSE"])
+    r.match(r"check_kern_pgdir_pse\(\) succeeded!")
+    r.match(r"check_page_installed_pgdir\(\) succeeded!")
+
+run_tests()
